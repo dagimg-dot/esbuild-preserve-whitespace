@@ -1,0 +1,48 @@
+{
+  "name": "esbuild-preserve-whitespace",
+  "version": "1.0.0",
+  "description": "Esbuild plugin for TypeScript transpilation with whitespace preservation",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "build": "bun build src/index.ts --outdir dist --target bun",
+    "dev": "bun build src/index.ts --outdir dist --target bun --watch",
+    "check:types": "tsc --noEmit",
+    "lint": "biome lint --write .",
+    "lint:unsafe": "biome lint --write --unsafe .",
+    "format": "biome format --write .",
+    "check": "biome check --write ."
+  },
+  "keywords": [
+    "esbuild",
+    "plugin",
+    "typescript",
+    "whitespace",
+    "preserve"
+  ],
+  "author": "Dagim G. Astatkie",
+  "license": "MIT",
+  "dependencies": {
+    "glob": "^11.0.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/node": "^22.0.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.0.0",
+    "@biomejs/biome": "^2.3.6"
+  },
+  "peerDependencies": {
+    "esbuild": "^0.19.0"
+  }
+}
