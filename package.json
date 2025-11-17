@@ -12,7 +12,9 @@
     }
   },
   "files": [
-    "src"
+    "src",
+    "README.md",
+    "package.json"
   ],
   "scripts": {
     "build": "bun build src/index.ts --outdir dist --target bun",
@@ -21,7 +23,8 @@
     "lint": "biome lint --write .",
     "lint:unsafe": "biome lint --write --unsafe .",
     "format": "biome format --write .",
-    "check": "biome check --write ."
+    "check": "biome check --write .",
+    "publish": "bun publish --access public"
   },
   "keywords": [
     "esbuild",
@@ -32,6 +35,14 @@
   ],
   "author": "Dagim G. Astatkie",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dagimg-dot/esbuild-preserve-whitespace.git"
+  },
+  "homepage": "https://github.com/dagimg-dot/esbuild-preserve-whitespace#readme",
+  "bugs": {
+    "url": "https://github.com/dagimg-dot/esbuild-preserve-whitespace/issues"
+  },
   "dependencies": {
     "glob": "^11.0.0"
   },
