@@ -38,7 +38,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/dagimg-dot/esbuild-preserve-whitespace.git"
+    "url": "git+https://github.com/dagimg-dot/esbuild-preserve-whitespace.git"
   },
   "homepage": "https://github.com/dagimg-dot/esbuild-preserve-whitespace#readme",
   "bugs": {
