@@ -1,10 +1,10 @@
+import { readFile } from "node:fs/promises";
 import { relative } from "node:path";
 import type { Plugin, PluginBuild } from "esbuild";
 import { glob } from "glob";
-import { extractConfig, validateConfig } from "./config.js";
 import { BLANK_LINE_MARKER } from "./constants.js";
 import type { EsbuildPreserveWhitespaceOptions } from "./types.js";
-import { addMarkers, log, removeMarkers, restoreContent } from "./utils.js";
+import { log, removeMarkers } from "./utils.js";
 
 function createPlugin(options: EsbuildPreserveWhitespaceOptions = {}): Plugin {
 	const { verbose = false } = options;
@@ -12,100 +12,52 @@ function createPlugin(options: EsbuildPreserveWhitespaceOptions = {}): Plugin {
 	return {
 		name: "esbuild-preserve-whitespace",
 		setup(build: PluginBuild) {
-			const originalContents = new Map<string, string>();
-			let distPattern: string;
-			const projectRoot = build.initialOptions.absWorkingDir || process.cwd();
-
-			build.onStart(async () => {
-				validateConfig(build.initialOptions);
-
-				const { srcPattern, distPattern: pattern } = extractConfig(
-					build.initialOptions,
+			if (build.initialOptions.legalComments !== "inline") {
+				throw new Error(
+					"esbuild-preserve-whitespace plugin requires legalComments to be set to 'inline' in esbuild config.\n" +
+						'Please add `legalComments: "inline"` to your esbuild configuration.',
 				);
+			}
 
-				distPattern = pattern;
+			const projectRoot = build.initialOptions.absWorkingDir || process.cwd();
+			const outdir = build.initialOptions.outdir || "dist";
 
-				log(`Starting esbuild-preserve-whitespace plugin...\n`, verbose);
-				log(`Source pattern: ${srcPattern}`, verbose);
-				log(`Output pattern: ${distPattern}\n`, verbose);
+			build.onLoad({ filter: /\.(ts|tsx)$/ }, async (args) => {
+				if (args.path.endsWith(".d.ts")) return;
 
-				let srcFiles: string[] = [];
+				const content = await readFile(args.path, "utf-8");
+				const lines = content.split("\n");
+				const modified = lines
+					.map((line) => (line.trim() === "" ? BLANK_LINE_MARKER : line))
+					.join("\n");
 
-				if (Array.isArray(srcPattern)) {
-					for (const pattern of srcPattern) {
-						const files = await glob(pattern, {
-							cwd: projectRoot,
-							absolute: true,
-							nodir: true,
-						});
+				log(`   ✓ ${relative(projectRoot, args.path)}`, verbose);
 
-						srcFiles.push(...files);
-					}
-				} else if (srcPattern) {
-					srcFiles = await glob(srcPattern, {
-						cwd: projectRoot,
-						absolute: true,
-						nodir: true,
-					});
-				}
+				return {
+					contents: modified,
+					loader: "ts",
+				};
+			});
 
-				srcFiles = [...new Set(srcFiles)];
+			build.onEnd(async () => {
+				log("Removing markers from output files...", verbose);
 
-				log(`Found ${srcFiles.length} TypeScript files\n`, verbose);
+				const distFiles = await glob(`${outdir}/**/*.js`, {
+					cwd: projectRoot,
+					absolute: true,
+					nodir: true,
+				});
 
-				log("Adding whitespace markers...", verbose);
+				log(`   Found ${distFiles.length} JavaScript files\n`, verbose);
 
 				await Promise.all(
-					srcFiles.map(async (file) => {
-						const originalContent = await addMarkers(file, BLANK_LINE_MARKER);
-						originalContents.set(file, originalContent);
+					distFiles.map(async (file) => {
+						await removeMarkers(file, BLANK_LINE_MARKER);
 						log(`   ✓ ${relative(projectRoot, file)}`, verbose);
 					}),
 				);
 
-				log("   All markers added successfully\n", verbose);
-			});
-
-			build.onEnd(async () => {
-				try {
-					log("Finding generated JavaScript files...", verbose);
-
-					const distFiles = await glob(distPattern, {
-						cwd: projectRoot,
-						absolute: true,
-						nodir: true,
-					});
-
-					log(`   Found ${distFiles.length} JavaScript files\n`, verbose);
-
-					log("Removing markers from output files...", verbose);
-
-					await Promise.all(
-						distFiles.map(async (file) => {
-							await removeMarkers(file, BLANK_LINE_MARKER);
-							log(`   ✓ ${relative(projectRoot, file)}`, verbose);
-						}),
-					);
-
-					log("   All markers removed from output\n", verbose);
-				} finally {
-					log("Restoring source files...", verbose);
-
-					await Promise.all(
-						Array.from(originalContents.entries()).map(
-							async ([file, content]) => {
-								await restoreContent(file, content);
-								log(`   ✓ ${relative(projectRoot, file)}`, verbose);
-							},
-						),
-					);
-
-					log("   All source files restored\n", verbose);
-					log(
-						"esbuild-preserve-whitespace plugin completed successfully",
-						verbose,
-					);
-				}
+				log("esbuild-preserve-whitespace plugin completed successfully", verbose);
 			});
 		},
 	};
